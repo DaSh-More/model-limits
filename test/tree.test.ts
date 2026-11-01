@@ -29,6 +29,21 @@ describe("tree builders", () => {
   });
 });
 
+describe("device sign-in hint hiding", () => {
+  const ok = reading;
+  const noAuth: AccountReading = {
+    ...reading, accountIdentity: null, accountLabel: null, status: "unauthenticated", limits: [],
+    device: { hostId: "h2", name: "server-1" },
+  };
+  const overrides = { hidden: ["claude-code|device:h2"], names: {} };
+  it("stored tree drops the hint, discovered tree keeps it", () => {
+    expect(buildStoredTree([ok, noAuth], overrides)[0].hints).toEqual([]);
+    expect(buildDiscoveredTree([ok, noAuth], overrides)[0].hints).toEqual([
+      { text: "На server-1 не выполнен вход", hostId: "h2" },
+    ]);
+  });
+});
+
 describe("buildPillTrees", () => {
   it("idle pill ignores hidden providers, matching tree keeps them", () => {
     const low = { ...reading, limits: [{ kind: "window" as const, id: "w", label: "5h", remainingPercent: 3, resetsAt: null, model: null }] };

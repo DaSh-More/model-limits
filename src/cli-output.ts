@@ -25,7 +25,7 @@ export function renderSummaryText(tree: ProviderNode[], summary: Summary, now: D
   for (const p of tree) {
     lines.push(p.name);
     for (const a of p.accounts) lines.push(...accountLines(a, now));
-    for (const h of p.hints) lines.push(` ${h}`);
+    for (const h of p.hints) lines.push(` ${h.text}`);
   }
   lines.push("");
   const min = summary.minimum;
@@ -57,7 +57,7 @@ const pickAccount = (a: AccountNode, now: Date) => ({
 const pickProvider = (p: ProviderNode, now: Date) => ({
   providerId: p.providerId,
   name: p.name,
-  hints: [...p.hints],
+  hints: p.hints.map((h) => h.text),
   accounts: p.accounts.map((a) => pickAccount(a, now)),
 });
 

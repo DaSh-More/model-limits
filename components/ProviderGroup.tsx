@@ -72,7 +72,7 @@ export function ProviderGroup({ provider, now }: { provider: ProviderNode; now: 
         ))
       )}
       {hints.map((h) => (
-        <p key={h} className="text-xs text-warning-text">{h}</p>
+        <p key={h.hostId} className="text-xs text-warning-text">{h.text}</p>
       ))}
     </section>
   );

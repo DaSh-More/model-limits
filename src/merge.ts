@@ -75,9 +75,11 @@ export function merge(readings: AccountReading[], overrides: Overrides): Provide
       groups.set(key, [...(groups.get(key) ?? []), x]);
     }
     const hasOthers = groups.size > 0;
-    const hints: string[] = [];
+    const hints: { text: string; hostId: string }[] = [];
     if (hasOthers) {
-      for (const x of loginOnly) hints.push(`На ${deviceName(x.device)} не выполнен вход`);
+      for (const x of loginOnly) {
+        if ("hostId" in x.device) hints.push({ text: `На ${deviceName(x.device)} не выполнен вход`, hostId: x.device.hostId });
+      }
     } else {
       for (const x of loginOnly) groups.set(accountKey(x), [...(groups.get(accountKey(x)) ?? []), x]);
     }

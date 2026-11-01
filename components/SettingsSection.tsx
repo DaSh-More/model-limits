@@ -139,6 +139,12 @@ export function SettingsSection() {
     void load();
   };
 
+  const hintRows = tree.flatMap((p) =>
+    asArray<ProviderNode["hints"][number]>(p.hints)
+      .filter((h) => h && typeof h.text === "string" && typeof h.hostId === "string")
+      .map((h) => ({ key: `${p.providerId}|device:${h.hostId}`, text: h.text })),
+  );
+
   const accounts: { provider: string; account: AccountNode }[] = tree.flatMap((p) =>
     asArray<AccountNode>(p.accounts).map((account) => ({ provider: p.name, account })),
   );
@@ -212,7 +218,7 @@ export function SettingsSection() {
 
       <section className="space-y-2">
         <h3 className="text-sm font-medium">Найденные автоматически</h3>
-        {accounts.length === 0 && <p className="text-xs text-muted-foreground">Ничего не найдено</p>}
+        {accounts.length === 0 && hintRows.length === 0 && <p className="text-xs text-muted-foreground">Ничего не найдено</p>}
         {accounts.map(({ provider, account }) => {
           const shown = !overrides.hidden.includes(account.key);
           const devices = asArray<AccountNode["devices"][number]>(account.devices).map((d) =>
@@ -242,6 +248,16 @@ export function SettingsSection() {
             </div>
           );
         })}
+        {hintRows.map((h) => (
+          <label key={h.key} className="flex items-center gap-3 rounded-lg border p-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!overrides.hidden.includes(h.key)}
+              onChange={(e) => toggleShown(h.key, e.target.checked)}
+            />
+            <span className="min-w-0 flex-1 truncate">{h.text}</span>
+          </label>
+        ))}
       </section>
 
       <section className="space-y-1">

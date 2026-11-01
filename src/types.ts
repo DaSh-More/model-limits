@@ -77,7 +77,7 @@ export interface ProviderNode {
   providerId: string;
   name: string;
   accounts: AccountNode[];
-  hints: string[];
+  hints: { text: string; hostId: string }[];
 }
 
 export interface Overrides {

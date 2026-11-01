@@ -48,8 +48,12 @@ describe("merge", () => {
   });
   it("unauthenticated with another account becomes hint", () => {
     const out = merge([r(), noAuth({ device: { hostId: "h2", name: "server-1" } })], none);
-    expect(out[0].hints).toEqual(["На server-1 не выполнен вход"]);
+    expect(out[0].hints).toEqual([{ text: "На server-1 не выполнен вход", hostId: "h2" }]);
     expect(out[0].accounts).toHaveLength(1);
+  });
+  it("service-device login-only reading yields no hint", () => {
+    const out = merge([r(), noAuth({ device: { service: true } })], none);
+    expect(out[0].hints).toEqual([]);
   });
   it("unauthenticated alone becomes status row; one per device", () => {
     const out = merge([noAuth(), noAuth({ device: { hostId: "h2", name: "arch" } })], none);
