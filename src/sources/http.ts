@@ -104,8 +104,9 @@ export function parseBalance(source: HttpSource, json: unknown, now: Date): Acco
     const models = source.modelPath !== null ? column(json, source.modelPath, n) : null;
     const orgs = source.organizationPath !== null ? column(json, source.organizationPath, n) : null;
 
-    const orgValue = orgs?.[0];
-    const organization = typeof orgValue === "string" && orgValue !== "" ? orgValue : fixedOrg;
+    const orgSet = new Set(orgs?.filter((o): o is string => typeof o === "string" && o !== ""));
+    if (orgSet.size > 1) return fail(`по пути ${source.organizationPath} разные организации`);
+    const organization = orgSet.size === 1 ? [...orgSet][0] : fixedOrg;
 
     if (n === 0) return fail("в ответе нет балансов", organization);
 

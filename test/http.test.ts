@@ -70,6 +70,20 @@ describe("parseBalance", () => {
     expect(r2.accountLabel).toBe("Acme");
     expect(r2.accountIdentity).toBe("pz1:Acme");
   });
+  it("mixed organizations from organizationPath are an error naming the path", () => {
+    const s = { ...polza, organizationPath: "a[*].o", amountPath: "a[*].v" };
+    const r = parseBalance(s, { a: [{ v: 1, o: "A" }, { v: 2, o: "B" }] }, now);
+    expect(r.status).toBe("error");
+    expect(r.message).toContain("a[*].o");
+    expect(r.limits).toEqual([]);
+  });
+  it("equal organizations from organizationPath stay ok", () => {
+    const s = { ...polza, organizationPath: "a[*].o", amountPath: "a[*].v" };
+    const r = parseBalance(s, { a: [{ v: 1, o: "A" }, { v: 2, o: "A" }] }, now);
+    expect(r.status).toBe("ok");
+    expect(r.accountLabel).toBe("A");
+    expect(r.limits).toHaveLength(2);
+  });
   it("modelPath fills model per element", () => {
     const s = { ...deepseek, modelPath: "balance_infos[*].m" };
     const r = parseBalance(s, { balance_infos: [{ total_balance: 1, currency: "USD", m: "x" }] }, now);
