@@ -19,6 +19,7 @@ export interface CollectorDeps {
 }
 
 const MAX_CONCURRENT = 4;
+export const HOST_TIMEOUT_MS = 30_000;
 const HOST_ERROR_MESSAGE = "Не удалось получить данные с машины";
 const SOURCE_ERROR_MESSAGE = "Не удалось получить данные";
 
@@ -60,25 +61,44 @@ function createLimiter(max: number) {
   };
 }
 
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timeout")), ms);
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export class Collector {
   private snapshot: Snapshot | null = null;
   private inflight: Promise<Snapshot> | null = null;
 
   constructor(private readonly deps: CollectorDeps) {}
 
-  async current(): Promise<Snapshot> {
+  private async loadPrev(): Promise<Snapshot> {
     if (this.snapshot) return this.snapshot;
-    let loaded: Snapshot | null = null;
-    try {
-      loaded = await this.deps.load();
-    } catch {
-      loaded = null;
-    }
+    const loaded = await this.deps.load();
     if (loaded) {
       this.snapshot = loaded;
       return loaded;
     }
     return { readings: [], updatedAt: null };
+  }
+
+  async current(): Promise<Snapshot> {
+    try {
+      return await this.loadPrev();
+    } catch {
+      return { readings: [], updatedAt: null };
+    }
   }
 
   collect(refresh: boolean): Promise<Snapshot> {
@@ -92,7 +112,7 @@ export class Collector {
 
   private async run(refresh: boolean): Promise<Snapshot> {
     const { deps } = this;
-    const prev = (await this.current()).readings;
+    const prev = (await this.loadPrev()).readings;
     const now = deps.now();
     const limited = createLimiter(MAX_CONCURRENT);
 
@@ -111,7 +131,7 @@ export class Collector {
       if (!host.connected) return before.map((r) => ({ ...r, offline: true }));
       let fresh: AccountReading[];
       try {
-        fresh = await limited(() => readHost(host, deps.bb, refresh, now));
+        fresh = await limited(() => withTimeout(readHost(host, deps.bb, refresh, now), HOST_TIMEOUT_MS));
       } catch {
         return before.map((r) => ({ ...r, status: "error" as const, message: HOST_ERROR_MESSAGE }));
       }

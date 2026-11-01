@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Collector, type CollectorDeps, type Snapshot } from "../src/collector";
+import { Collector, HOST_TIMEOUT_MS, type CollectorDeps, type Snapshot } from "../src/collector";
 import { PRESETS } from "../src/sources/presets";
 import type { AccountReading, HttpSource } from "../src/types";
 
@@ -275,5 +275,68 @@ describe("Collector", () => {
     const s = await c.collect(false);
     expect(s.readings).toHaveLength(6);
     expect(max).toBe(4);
+  });
+
+  it("load() throw rejects without save/publish; later collect recovers", async () => {
+    let broken = true;
+    const save = vi.fn(async () => {});
+    const publish = vi.fn();
+    const { c } = setup({
+      load: async () => {
+        if (broken) throw new Error("unreadable");
+        return { readings: [claude()], updatedAt: "x" };
+      },
+      save,
+      publish,
+      loadSources: async () => [],
+    });
+    await expect(c.collect(false)).rejects.toThrow();
+    expect(save).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+    expect(await c.current()).toEqual({ readings: [], updatedAt: null });
+    broken = false;
+    expect((await c.current()).readings).toHaveLength(1);
+  });
+
+  describe("hung host", () => {
+    it("times out into retained error; others complete; next collect runs anew", async () => {
+      vi.useFakeTimers();
+      try {
+        let hang = true;
+        const usageLimits = vi.fn(async (id: string) => {
+          if (id === "h1" && hang) return new Promise<Record<string, unknown>>(() => {});
+          return usage();
+        });
+        const { c, stored } = setup(
+          {
+            bb: {
+              listHosts: async () => [
+                { id: "h1", name: "H1", connected: true },
+                { id: "h2", name: "H2", connected: true },
+              ],
+              usageLimits,
+            },
+            loadSources: async () => [ds],
+          },
+          { readings: [claude()], updatedAt: "x" },
+        );
+        const p = c.collect(false);
+        await vi.advanceTimersByTimeAsync(HOST_TIMEOUT_MS);
+        const s = await p;
+        const h1 = s.readings.filter((r) => r.device && "hostId" in r.device && r.device.hostId === "h1");
+        expect(h1).toHaveLength(1);
+        expect(h1[0]).toMatchObject({ status: "error", fetchedAt: "2026-11-01T11:00:00.000Z" });
+        expect(h1[0].limits).toHaveLength(1);
+        expect(s.readings.some((r) => "hostId" in r.device && r.device.hostId === "h2")).toBe(true);
+        expect(s.readings.some((r) => r.sourceId === "ds1")).toBe(true);
+        expect(stored()).toEqual(s);
+        hang = false;
+        const s2 = await c.collect(false);
+        expect(s2).not.toBe(s);
+        expect(usageLimits).toHaveBeenCalledTimes(4);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });
