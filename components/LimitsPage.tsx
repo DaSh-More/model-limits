@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
 import { Button } from "./ui/button";
 import { ProviderGroup } from "./ProviderGroup";
-import { formatAge, formatReset } from "../src/format";
+import { formatAge, formatReset, isSnapshotShape } from "../src/format";
 import type { rpcContract } from "../src/rpc-contract";
 import type { Summary } from "../src/summary";
 import type { ProviderNode } from "../src/types";
@@ -44,7 +44,10 @@ export function LimitsPage() {
 
   const load = useCallback(async () => {
     try {
-      setView(await rpc.call("snapshot_get", null));
+      const next = await rpc.call("snapshot_get", null);
+      if (!isSnapshotShape(next)) throw new Error("bad shape");
+      setView(next);
+      setError(null);
       setNow(new Date());
     } catch {
       setError("Не удалось загрузить данные");
@@ -62,7 +65,9 @@ export function LimitsPage() {
     setBusy(true);
     setError(null);
     try {
-      setView(await rpc.call("refresh", null));
+      const next = await rpc.call("refresh", null);
+      if (!isSnapshotShape(next)) throw new Error("bad shape");
+      setView(next);
       setNow(new Date());
     } catch {
       setError("Не удалось обновить");

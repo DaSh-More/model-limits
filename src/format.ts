@@ -29,3 +29,15 @@ export function formatAge(fetchedAt: string, now: Date): string {
   if (min < 60) return `обновлено ${min} мин назад`;
   return `обновлено ${Math.floor(min / 60)} ч назад`;
 }
+
+export function displayPercent(value: number): { width: number; text: string } {
+  if (typeof value !== "number" || !Number.isFinite(value)) return { width: 0, text: "—" };
+  const width = Math.max(0, Math.min(100, Math.round(value)));
+  return { width, text: `${width}%` };
+}
+
+export function isSnapshotShape(v: unknown): boolean {
+  if (typeof v !== "object" || v === null) return false;
+  const r = v as { tree?: unknown; summary?: unknown };
+  return Array.isArray(r.tree) && typeof r.summary === "object" && r.summary !== null;
+}

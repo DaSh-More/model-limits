@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAge, formatAmount, formatReset } from "../src/format";
+import { displayPercent, formatAge, formatAmount, formatReset, isSnapshotShape } from "../src/format";
 
 const now = new Date("2026-11-01T12:00:00Z");
 const at = (min: number) => new Date(now.getTime() + min * 60000).toISOString();
@@ -47,4 +47,25 @@ describe("formatAge", () => {
   it("minutes", () => expect(formatAge(ago(14), now)).toBe("обновлено 14 мин назад"));
   it("hours", () => expect(formatAge(ago(130), now)).toBe("обновлено 2 ч назад"));
   it("invalid date", () => expect(formatAge("x", now)).toBe(""));
+});
+
+describe("displayPercent", () => {
+  it("rounds and clamps", () => {
+    expect(displayPercent(63.6)).toEqual({ width: 64, text: "64%" });
+    expect(displayPercent(150)).toEqual({ width: 100, text: "100%" });
+    expect(displayPercent(-3)).toEqual({ width: 0, text: "0%" });
+  });
+  it("treats non-finite as unknown", () => {
+    for (const v of [NaN, Infinity, undefined as unknown as number])
+      expect(displayPercent(v)).toEqual({ width: 0, text: "—" });
+  });
+});
+
+describe("isSnapshotShape", () => {
+  it("accepts array tree and object summary", () =>
+    expect(isSnapshotShape({ tree: [], summary: {}, updatedAt: null })).toBe(true));
+  it("rejects malformed", () => {
+    for (const v of [null, 1, {}, { tree: {}, summary: {} }, { tree: [], summary: null }, { tree: [] }])
+      expect(isSnapshotShape(v)).toBe(false);
+  });
 });

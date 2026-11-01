@@ -21,7 +21,8 @@ function AccountTags({ account }: { account: AccountNode }) {
   );
 }
 
-function AccountBody({ account, now }: { account: AccountNode; now: Date }) {
+function AccountBody({ account: raw, now }: { account: AccountNode; now: Date }) {
+  const account = { ...raw, limits: Array.isArray(raw.limits) ? raw.limits : [] };
   const failed = account.status === "error";
   return (
     <div className="space-y-2">
@@ -48,7 +49,9 @@ function AccountBody({ account, now }: { account: AccountNode; now: Date }) {
 }
 
 export function ProviderGroup({ provider, now }: { provider: ProviderNode; now: Date }) {
-  const single = provider.accounts.length === 1 ? provider.accounts[0] : null;
+  const accounts = Array.isArray(provider.accounts) ? provider.accounts : [];
+  const hints = Array.isArray(provider.hints) ? provider.hints : [];
+  const single = accounts.length === 1 ? accounts[0] : null;
   return (
     <section className="space-y-3 rounded-lg border p-4">
       <header className="flex flex-wrap items-center gap-2">
@@ -58,7 +61,7 @@ export function ProviderGroup({ provider, now }: { provider: ProviderNode; now: 
       {single ? (
         <AccountBody account={single} now={now} />
       ) : (
-        provider.accounts.map((a) => (
+        accounts.map((a) => (
           <div key={a.key} className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-xs font-medium text-muted-foreground">{a.label ?? "Аккаунт"}</h3>
@@ -68,8 +71,8 @@ export function ProviderGroup({ provider, now }: { provider: ProviderNode; now: 
           </div>
         ))
       )}
-      {provider.hints.map((h) => (
-        <p key={h} className="text-xs text-yellow-600 dark:text-yellow-400">{h}</p>
+      {hints.map((h) => (
+        <p key={h} className="text-xs text-warning-text">{h}</p>
       ))}
     </section>
   );
