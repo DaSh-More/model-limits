@@ -40,12 +40,14 @@ export function LimitsPill() {
   const current = useRef<string | null>(threadId);
   current.current = threadId;
   const seq = useRef(0);
+  const rpcRef = useRef(rpc);
+  rpcRef.current = rpc;
 
   const load = async () => {
     const asked = threadId;
     const mine = ++seq.current;
     try {
-      const next = await rpc.call("thread_view", { threadId: asked });
+      const next = await rpcRef.current.call("thread_view", { threadId: asked });
       if (mine !== seq.current || asked !== current.current) return;
       setView(next);
       setNow(new Date());
@@ -54,19 +56,22 @@ export function LimitsPill() {
     }
   };
 
+  const loadRef = useRef(load);
+  loadRef.current = load;
+
   useEffect(() => {
-    void rpc.call("pill_config", null).then(setConfig).catch(() => {});
-  }, [rpc]);
+    void rpcRef.current.call("pill_config", null).then(setConfig).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setView(null);
     setOpen(false);
-    void load();
-    const t = setInterval(() => void load(), POLL_MS);
+    void loadRef.current();
+    const t = setInterval(() => void loadRef.current(), POLL_MS);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threadId, rpc]);
-  useRealtime("snapshot-changed", () => void load());
+  }, [threadId]);
+  useRealtime("snapshot-changed", () => void loadRef.current());
 
   useEffect(() => {
     if (!open) return;
@@ -95,7 +100,7 @@ export function LimitsPill() {
             {idle ? "Балансы в минимум не входят" : meta || "нет данных"}
           </div>
           <div className="mt-2 space-y-1">
-            {view.limits.map((l) => (
+            {(Array.isArray(view.limits) ? view.limits : []).map((l) => (
               <div key={l.id} className="flex items-baseline justify-between gap-2">
                 <span className="truncate">{l.label}</span>
                 <span className="tabular-nums">
