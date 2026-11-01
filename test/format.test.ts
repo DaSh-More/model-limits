@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayPercent, formatAge, formatAmount, formatReset, isSnapshotShape } from "../src/format";
+import { displayPercent, formatAge, formatAmount, formatReset, isSnapshotShape, statusNote } from "../src/format";
 
 const now = new Date("2026-11-01T12:00:00Z");
 const at = (min: number) => new Date(now.getTime() + min * 60000).toISOString();
@@ -67,5 +67,19 @@ describe("isSnapshotShape", () => {
   it("rejects malformed", () => {
     for (const v of [null, 1, {}, { tree: {}, summary: {} }, { tree: [], summary: null }, { tree: [] }])
       expect(isSnapshotShape(v)).toBe(false);
+  });
+});
+
+describe("statusNote", () => {
+  it("unauthenticated uses message or default", () => {
+    expect(statusNote("unauthenticated", "Нет ключа deepseekApiKey")).toBe("Нет ключа deepseekApiKey");
+    expect(statusNote("unauthenticated", undefined)).toBe("не выполнен вход");
+  });
+  it("expired uses message or default", () => {
+    expect(statusNote("expired", "токен устарел")).toBe("токен устарел");
+    expect(statusNote("expired", undefined)).toBe("срок входа истёк");
+  });
+  it("ok gives null", () => {
+    expect(statusNote("ok", "x")).toBeNull();
   });
 });

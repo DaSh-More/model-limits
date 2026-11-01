@@ -1,4 +1,4 @@
-import { formatAge } from "../src/format";
+import { formatAge, statusNote } from "../src/format";
 import type { AccountNode, Device, ProviderNode } from "../src/types";
 import { LimitRow } from "./LimitRow";
 
@@ -23,6 +23,7 @@ function AccountTags({ account }: { account: AccountNode }) {
 
 function AccountBody({ account: raw, now }: { account: AccountNode; now: Date }) {
   const account = { ...raw, limits: Array.isArray(raw.limits) ? raw.limits : [] };
+  const note = statusNote(account.status, account.message);
   const failed = account.status === "error";
   return (
     <div className="space-y-2">
@@ -35,9 +36,7 @@ function AccountBody({ account: raw, now }: { account: AccountNode; now: Date })
       {account.status === "not_installed" && (
         <p className="text-xs text-muted-foreground">не установлен</p>
       )}
-      {account.status === "unauthenticated" && account.limits.length === 0 && (
-        <p className="text-xs text-muted-foreground">не выполнен вход</p>
-      )}
+      {note !== null && <p className="text-xs text-muted-foreground">{note}</p>}
       {account.status === "ok" && account.limits.length === 0 && (
         <p className="text-xs text-muted-foreground">лимиты не сообщаются</p>
       )}

@@ -41,3 +41,10 @@ export function isSnapshotShape(v: unknown): boolean {
   const r = v as { tree?: unknown; summary?: unknown };
   return Array.isArray(r.tree) && typeof r.summary === "object" && r.summary !== null;
 }
+
+/** Status line for unauthenticated/expired accounts, preferring the source's own message. */
+export function statusNote(status: string, message: string | null | undefined): string | null {
+  if (status === "unauthenticated") return message ?? "не выполнен вход";
+  if (status === "expired") return message ?? "срок входа истёк";
+  return null;
+}
