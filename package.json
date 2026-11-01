@@ -13,7 +13,10 @@
       "icon": "Gauge"
     },
     "server": "./server.ts",
-    "app": "./app.tsx"
+    "app": "./app.tsx",
+    "skills": [
+      "skills"
+    ]
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.3.0",
