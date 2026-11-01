@@ -1,8 +1,6 @@
 import { definePluginApp } from "@get-bb/plugin-sdk/app";
 
-function LimitsPage() {
-  return null;
-}
+import { LimitsPage } from "./components/LimitsPage";
 
 export default definePluginApp((app) => {
   app.slots.navPanel({
