@@ -19,5 +19,5 @@ Data older than 30 minutes, or a window whose reset time has passed, is marked s
 
 - `refreshSeconds`: background interval in seconds (60, 120, 300, 600); `0` turns background collection off.
 - `showPill`: show the limits pill in the chat.
-- `pillFallback`: `minimum` shows the lowest remaining window when the chat's provider has no data; `hidden` hides the pill.
+- `pillFallback`: applies only when no chat is open: `minimum` shows the lowest remaining window, `hidden` hides the pill. A chat with no matching data shows its model and `нет данных`.
 - `deepseekApiKey`, `polzaApiKey`, `customKey1` to `customKey5`: secret keys for HTTP balance sources. Each source picks a key slot in the plugin's settings page; the key is only sent to that source's address.

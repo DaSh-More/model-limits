@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { accountKey } from "../src/merge";
-import { buildDiscoveredTree, buildStoredTree } from "../src/tree";
+import { idlePill } from "../src/thread-match";
+import { buildDiscoveredTree, buildPillTrees, buildStoredTree } from "../src/tree";
 import type { AccountReading } from "../src/types";
 
 const reading: AccountReading = {
@@ -25,5 +26,17 @@ describe("tree builders", () => {
     const o = { hidden: ["claude-code"], names: {} };
     expect(buildStoredTree([reading], o)).toHaveLength(0);
     expect(buildDiscoveredTree([reading], o)).toHaveLength(1);
+  });
+});
+
+describe("buildPillTrees", () => {
+  it("idle pill ignores hidden providers, matching tree keeps them", () => {
+    const low = { ...reading, limits: [{ kind: "window" as const, id: "w", label: "5h", remainingPercent: 3, resetsAt: null, model: null }] };
+    const other = { ...reading, providerId: "codex", accountIdentity: "b@x", limits: [{ ...low.limits[0], remainingPercent: 60 }] };
+    const { match, idle } = buildPillTrees([low, other], { hidden: ["claude-code"], names: {} });
+    const now = new Date("2026-11-01T10:05:00Z");
+    expect(idlePill(idle, now).percent).toBe(60);
+    expect(idlePill(match, now).percent).toBe(3);
+    expect(match.map((p) => p.providerId)).toContain("claude-code");
   });
 });

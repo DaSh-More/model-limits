@@ -7,8 +7,8 @@ import { fetchHttpSource } from "./src/sources/http";
 import { presetKeyMismatch } from "./src/sources/guard";
 import { PRESETS } from "./src/sources/presets";
 import { summarize } from "./src/summary";
-import { matchThread, idlePill, type PillView } from "./src/thread-match";
-import { buildDiscoveredTree, buildStoredTree } from "./src/tree";
+import { matchThread, idlePill, resolveProviderId, type PillView } from "./src/thread-match";
+import { buildDiscoveredTree, buildPillTrees, buildStoredTree } from "./src/tree";
 import { KEY_SLOTS, type HttpSource, type KeySlot, type Overrides } from "./src/types";
 
 const KV_SNAPSHOT = "snapshot";
@@ -36,7 +36,7 @@ export default async function plugin(bb: BbPluginApi) {
     showPill: { type: "boolean", label: "Показывать плашку в чате", default: true },
     pillFallback: {
       type: "select",
-      label: "Плашка вне чата или без данных",
+      label: "Плашка вне чата",
       options: ["minimum", "hidden"],
       experimental_optionLabels: { minimum: "Минимальный остаток", hidden: "Скрыть" },
       default: "minimum",
@@ -101,9 +101,9 @@ export default async function plugin(bb: BbPluginApi) {
 
   const threadView = async (threadId: string | null): Promise<PillView> => {
     const snap = await collector.current();
-    const tree = buildDiscoveredTree(snap.readings, await loadOverrides());
+    const { match: tree, idle } = buildPillTrees(snap.readings, await loadOverrides());
     const now = new Date();
-    if (threadId === null) return idlePill(tree, now);
+    if (threadId === null) return idlePill(idle, now);
     try {
       const thread = await bb.sdk.threads.get({ threadId });
       let hostId: string | null = null;
@@ -128,11 +128,16 @@ export default async function plugin(bb: BbPluginApi) {
       } catch {
         model = null;
       }
-      const catalog = await catalogFor(thread.providerId);
+      const resolved = resolveProviderId({ providerId: thread.providerId, model, hostId });
+      const catalog = resolved ? await catalogFor(resolved.id) : [];
       return matchThread({ providerId: thread.providerId, model, hostId }, tree, catalog, now);
     } catch {
-      return idlePill(tree, now);
+      return idlePill(idle, now);
     }
+  };
+
+  const recollect = () => {
+    collector.collect(false).catch(() => bb.log.warn("сбор после изменения источника не удался"));
   };
 
   const refresh = async () => {
@@ -161,12 +166,16 @@ export default async function plugin(bb: BbPluginApi) {
       if (i >= 0) all[i] = source;
       else all.push(source);
       await kv.set(KV_SOURCES, all);
+      recollect();
       return { source };
     },
     source_delete: async ({ id }) => {
       const all = await loadSources();
       const next = all.filter((s) => s.id !== id);
-      if (next.length !== all.length) await kv.set(KV_SOURCES, next);
+      if (next.length !== all.length) {
+        await kv.set(KV_SOURCES, next);
+        recollect();
+      }
       return { removed: next.length !== all.length };
     },
     source_test: async (source) => {
@@ -204,8 +213,8 @@ export default async function plugin(bb: BbPluginApi) {
           }
           const view = await storedView();
           const stdout = options.json
-            ? renderJson(view.tree, view.summary, CLI_MAX_BYTES) + "\n"
-            : renderSummaryText(view.tree, view.summary);
+            ? renderJson(view.tree, view.summary, CLI_MAX_BYTES, new Date()) + "\n"
+            : renderSummaryText(view.tree, view.summary, new Date());
           return { exitCode: 0, stdout };
         },
       },

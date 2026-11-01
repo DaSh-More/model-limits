@@ -59,7 +59,7 @@ function formatBalance(amount: number, currency: string): string {
   return `${amount.toFixed(2).replace(".", ",")} ${currency}`;
 }
 
-function resolveProviderId(input: ThreadInput): { id: string; viaPi: boolean } | null {
+export function resolveProviderId(input: ThreadInput): { id: string; viaPi: boolean } | null {
   if (input.providerId !== PI_PROVIDER_ID) return { id: input.providerId, viaPi: false };
   const model = (input.model ?? "").toLowerCase();
   for (const [prefix, id] of PI_PREFIXES) if (model.startsWith(prefix)) return { id, viaPi: true };

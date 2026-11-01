@@ -1,29 +1,30 @@
-import type { Summary } from "./summary";
+import { isStale, type Summary } from "./summary";
 import type { AccountNode, Limit, ProviderNode } from "./types";
 
 const fmtMoney = (n: number, c: string) => `${n.toFixed(2).replace(".", ",")} ${c}`;
 
-function limitLine(l: Limit): string {
-  if (l.kind === "balance") return `  ${l.label}: ${fmtMoney(l.amount, l.currency)}`;
+function limitLine(l: Limit, stale: boolean): string {
+  const mark = stale ? " (данные устарели)" : "";
+  if (l.kind === "balance") return `  ${l.label}: ${fmtMoney(l.amount, l.currency)}${mark}`;
   const reset = l.resetsAt ? `, сброс ${l.resetsAt}` : "";
-  return `  ${l.label}: ${Math.round(l.remainingPercent)}% осталось${reset}`;
+  return `  ${l.label}: ${Math.round(l.remainingPercent)}% осталось${reset}${mark}`;
 }
 
-function accountLines(a: AccountNode): string[] {
+function accountLines(a: AccountNode, now: Date): string[] {
   const title = [a.label, a.planLabel].filter(Boolean).join(" · ") || "аккаунт";
   const devices = a.devices.map((d) => ("name" in d ? d.name : "сервис")).join(", ");
   const flags = [a.offline ? "не в сети" : null, a.status !== "ok" ? a.status : null, a.message].filter(Boolean);
   const out = [` ${title}${devices ? ` [${devices}]` : ""}${flags.length ? ` (${flags.join("; ")})` : ""}`];
-  for (const l of a.limits) out.push(limitLine(l));
+  for (const l of a.limits) out.push(limitLine(l, isStale(l, a.fetchedAt, now)));
   return out;
 }
 
-export function renderSummaryText(tree: ProviderNode[], summary: Summary): string {
+export function renderSummaryText(tree: ProviderNode[], summary: Summary, now: Date): string {
   if (tree.length === 0) return "Нет данных о лимитах.\n";
   const lines: string[] = [];
   for (const p of tree) {
     lines.push(p.name);
-    for (const a of p.accounts) lines.push(...accountLines(a));
+    for (const a of p.accounts) lines.push(...accountLines(a, now));
     for (const h of p.hints) lines.push(` ${h}`);
   }
   lines.push("");
@@ -37,12 +38,12 @@ export function renderSummaryText(tree: ProviderNode[], summary: Summary): strin
   return lines.join("\n") + "\n";
 }
 
-const pickLimit = (l: Limit) =>
+const pickLimit = (l: Limit, stale: boolean) =>
   l.kind === "window"
-    ? { kind: l.kind, id: l.id, label: l.label, remainingPercent: l.remainingPercent, resetsAt: l.resetsAt, model: l.model }
-    : { kind: l.kind, id: l.id, label: l.label, amount: l.amount, currency: l.currency, model: l.model };
+    ? { stale, kind: l.kind, id: l.id, label: l.label, remainingPercent: l.remainingPercent, resetsAt: l.resetsAt, model: l.model }
+    : { stale, kind: l.kind, id: l.id, label: l.label, amount: l.amount, currency: l.currency, model: l.model };
 
-const pickAccount = (a: AccountNode) => ({
+const pickAccount = (a: AccountNode, now: Date) => ({
   label: a.label,
   planLabel: a.planLabel,
   devices: a.devices.map((d) => ("hostId" in d ? { hostId: d.hostId, name: d.name } : { service: true })),
@@ -50,14 +51,14 @@ const pickAccount = (a: AccountNode) => ({
   message: a.message,
   offline: a.offline,
   fetchedAt: a.fetchedAt,
-  limits: a.limits.map(pickLimit),
+  limits: a.limits.map((l) => pickLimit(l, isStale(l, a.fetchedAt, now))),
 });
 
-const pickProvider = (p: ProviderNode) => ({
+const pickProvider = (p: ProviderNode, now: Date) => ({
   providerId: p.providerId,
   name: p.name,
   hints: [...p.hints],
-  accounts: p.accounts.map(pickAccount),
+  accounts: p.accounts.map((a) => pickAccount(a, now)),
 });
 
 const pickSummary = (s: Summary) => ({
@@ -71,8 +72,8 @@ const pickSummary = (s: Summary) => ({
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
-export function renderJson(tree: ProviderNode[], summary: Summary, maxBytes: number): string {
-  const providers = tree.map(pickProvider);
+export function renderJson(tree: ProviderNode[], summary: Summary, maxBytes: number, now: Date): string {
+  const providers = tree.map((p) => pickProvider(p, now));
   const sum = pickSummary(summary);
   const full = JSON.stringify({ truncated: false, summary: sum, tree: providers });
   if (bytes(full) <= maxBytes) return full;

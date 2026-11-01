@@ -10,3 +10,8 @@ export function buildStoredTree(readings: AccountReading[], overrides: Overrides
 export function buildDiscoveredTree(readings: AccountReading[], overrides: Overrides): ProviderNode[] {
   return merge(readings, { hidden: [], names: overrides.names });
 }
+
+/** Trees for the pill: only matching a chat uses the unhidden tree; the idle pill respects hiding. */
+export function buildPillTrees(readings: AccountReading[], overrides: Overrides) {
+  return { match: buildDiscoveredTree(readings, overrides), idle: buildStoredTree(readings, overrides) };
+}

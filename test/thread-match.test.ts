@@ -126,3 +126,16 @@ describe("idlePill", () => {
     expect(v.tone).toBe("bad");
   });
 });
+
+import { resolveProviderId as rpi } from "../src/thread-match";
+describe("resolveProviderId", () => {
+  const r = (providerId: string, model: string | null) => rpi({ providerId, model, hostId: null });
+  it("resolves direct, pi prefixes and unknown", () => {
+    expect(r("codex", null)).toEqual({ id: "codex", viaPi: false });
+    expect(r("pi", "kimi-k2")?.id).toBe("kimi-code");
+    expect(r("pi", "GLM-4.6")?.id).toBe("GLM");
+    expect(r("pi", "claude-opus")?.id).toBe("claude-code");
+    expect(r("pi", "gpt-5")).toBeNull();
+    expect(r("pi", null)).toBeNull();
+  });
+});
