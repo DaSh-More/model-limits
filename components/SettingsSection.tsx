@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { createDebouncedSaves } from "../src/debounced-saves";
 import { SourceForm } from "./SourceForm";
 import { draftFromPreset, emptyDraft } from "../src/source-draft";
 import type { rpcContract } from "../src/rpc-contract";
@@ -50,7 +51,9 @@ export function SettingsSection() {
 
   const committed = useRef<Overrides>({ hidden: [], names: {} });
   const queue = useRef<Promise<void>>(Promise.resolve());
-  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const saveName = useRef<(key: string, value: string) => void>(() => undefined);
+  const nameSaves = useRef<ReturnType<typeof createDebouncedSaves> | null>(null);
+  nameSaves.current ??= createDebouncedSaves(NAME_DEBOUNCE_MS, (k, v) => saveName.current(k, v));
 
   const load = useCallback(async () => {
     try {
@@ -76,8 +79,8 @@ export function SettingsSection() {
 
   useEffect(() => {
     void load();
-    const t = timers.current;
-    return () => Object.values(t).forEach(clearTimeout);
+    const saves = nameSaves.current;
+    return () => saves?.flush();
   }, [load]);
   useRealtime("snapshot-changed", () => {
     void rpc
@@ -114,24 +117,24 @@ export function SettingsSection() {
       hidden: shown ? o.hidden.filter((k) => k !== key) : o.hidden.includes(key) ? o.hidden : [...o.hidden, key],
     }));
 
+  saveName.current = (key, value) =>
+    saveOverrides(
+      (o) => {
+        const names = { ...o.names };
+        if (value.trim() === "") delete names[key];
+        else names[key] = value.trim();
+        return { ...o, names };
+      },
+      () =>
+        setDrafts((d) => {
+          const { [key]: _drop, ...rest } = d;
+          return rest;
+        }),
+    );
+
   const onName = (key: string, value: string) => {
     setDrafts((d) => ({ ...d, [key]: value }));
-    clearTimeout(timers.current[key]);
-    timers.current[key] = setTimeout(() => {
-      saveOverrides(
-        (o) => {
-          const names = { ...o.names };
-          if (value.trim() === "") delete names[key];
-          else names[key] = value.trim();
-          return { ...o, names };
-        },
-        () =>
-          setDrafts((d) => {
-            const { [key]: _drop, ...rest } = d;
-            return rest;
-          }),
-      );
-    }, NAME_DEBOUNCE_MS);
+    nameSaves.current?.set(key, value);
   };
 
   const closeAndReload = () => {
@@ -244,6 +247,7 @@ export function SettingsSection() {
                 placeholder="Своё имя"
                 value={drafts[account.key] ?? overrides.names[account.key] ?? ""}
                 onChange={(e) => onName(account.key, e.target.value)}
+                onBlur={() => nameSaves.current?.flush(account.key)}
               />
             </div>
           );
