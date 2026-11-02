@@ -10,6 +10,17 @@ const BAR: Record<"good" | "warn" | "bad" | "muted", string> = {
   muted: "bg-muted-foreground/40",
 };
 
+/** Fill shows the used share; the colour follows the remaining share. */
+export function LimitBar({ remaining, stale }: { remaining: number; stale: boolean }) {
+  const known = Number.isFinite(remaining);
+  const tone = stale || !known ? "muted" : toneFor(remaining);
+  return (
+    <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="presentation">
+      <div className={`h-full rounded-full ${BAR[tone]}`} style={{ width: `${displayPercent(remaining).width}%` }} />
+    </div>
+  );
+}
+
 export function LimitRow({ limit, fetchedAt, now }: { limit: Limit; fetchedAt: string; now: Date }) {
   const stale = isStale(limit, fetchedAt, now);
 
@@ -26,15 +37,11 @@ export function LimitRow({ limit, fetchedAt, now }: { limit: Limit; fetchedAt: s
   }
 
   const pct = displayPercent(limit.remainingPercent);
-  const known = Number.isFinite(limit.remainingPercent);
-  const tone = stale || !known ? "muted" : toneFor(limit.remainingPercent);
   const reset = stale ? "данные устарели" : formatReset(limit.resetsAt, now);
   return (
     <div className="grid grid-cols-[minmax(4rem,8rem)_1fr_3rem_minmax(5rem,7rem)] items-center gap-3 text-sm">
       <span className="truncate">{limit.label}</span>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="presentation">
-        <div className={`h-full rounded-full ${BAR[tone]}`} style={{ width: `${pct.width}%` }} />
-      </div>
+      <LimitBar remaining={limit.remainingPercent} stale={stale} />
       <span className={`text-right tabular-nums ${stale ? "text-muted-foreground" : ""}`}>{pct.text}</span>
       <span className="truncate text-xs text-muted-foreground">{reset}</span>
     </div>

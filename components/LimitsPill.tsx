@@ -4,6 +4,8 @@ import { useBbNavigate, useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
 import { usePortalScopeProps } from "../lib/portal-scope";
 import { displayPercent, formatAge, formatAmount, formatReset } from "../src/format";
 import type { PillConfig } from "../src/pill-ui";
+import { isStale } from "../src/summary";
+import { LimitBar } from "./LimitRow";
 import type { rpcContract } from "../src/rpc-contract";
 import type { PillView } from "../src/thread-match";
 
@@ -116,13 +118,21 @@ export function LimitsPill({
         >
           <div className="truncate text-sm font-medium">{cardTitle(view)}</div>
           <div className="mt-0.5 text-muted-foreground">{meta || "нет данных"}</div>
-          <div className="mt-2 space-y-1">
+          <div className="mt-2 space-y-2">
             {limits.map((l) => (
-              <div key={l.id} className="flex items-baseline justify-between gap-2">
-                <span className="truncate">{l.label}</span>
-                <span className="tabular-nums">
-                  {l.kind === "window" ? displayPercent(l.remainingPercent).text : formatAmount(l.amount, l.currency)}
-                </span>
+              <div key={l.id} className="space-y-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate">{l.label}</span>
+                  <span className="tabular-nums">
+                    {l.kind === "window" ? displayPercent(l.remainingPercent).text : formatAmount(l.amount, l.currency)}
+                  </span>
+                </div>
+                {l.kind === "window" ? (
+                  <LimitBar
+                    remaining={l.remainingPercent}
+                    stale={view.fetchedAt !== null && isStale(l, view.fetchedAt, now)}
+                  />
+                ) : null}
               </div>
             ))}
           </div>
