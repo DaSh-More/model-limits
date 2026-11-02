@@ -18,11 +18,11 @@ const BADGE_TONE: Record<PillView["tone"], LimitsBadge["tone"]> = {
   muted: "neutral",
 };
 
-/** The rail badge of the limits page: the lowest fresh remaining percent. */
+/** The rail badge of the limits page: the highest fresh used percent. */
 export function badgeFor(config: PillConfig | null, view: PillView | null): LimitsBadge | null {
   if (!config || !view || !config.showPill || config.pillFallback === "hidden") return null;
   if (view.percent === null || view.stale) return null;
-  const text = `${Math.round(view.percent)}%`;
+  const text = `${100 - Math.round(view.percent)}%`;
   const provider = view.providerName ? `${view.providerName}, ` : "";
-  return { text, tone: BADGE_TONE[view.tone], label: `Минимальный остаток: ${provider}${text}` };
+  return { text, tone: BADGE_TONE[view.tone], label: `Больше всего использовано: ${provider}${text}` };
 }

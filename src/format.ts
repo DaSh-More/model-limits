@@ -30,9 +30,10 @@ export function formatAge(fetchedAt: string, now: Date): string {
   return `обновлено ${Math.floor(min / 60)} ч назад`;
 }
 
-export function displayPercent(value: number): { width: number; text: string } {
-  if (typeof value !== "number" || !Number.isFinite(value)) return { width: 0, text: "—" };
-  const width = Math.max(0, Math.min(100, Math.round(value)));
+/** Display form of a remaining percent: the used share, as shown to the user. */
+export function displayPercent(remaining: number): { width: number; text: string } {
+  if (typeof remaining !== "number" || !Number.isFinite(remaining)) return { width: 0, text: "—" };
+  const width = Math.max(0, Math.min(100, 100 - Math.round(remaining)));
   return { width, text: `${width}%` };
 }
 

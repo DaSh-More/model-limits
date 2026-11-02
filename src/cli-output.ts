@@ -7,7 +7,7 @@ function limitLine(l: Limit, stale: boolean): string {
   const mark = stale ? " (данные устарели)" : "";
   if (l.kind === "balance") return `  ${l.label}: ${fmtMoney(l.amount, l.currency)}${mark}`;
   const reset = l.resetsAt ? `, сброс ${l.resetsAt}` : "";
-  return `  ${l.label}: ${Math.round(l.remainingPercent)}% осталось${reset}${mark}`;
+  return `  ${l.label}: ${100 - Math.round(l.remainingPercent)}% использовано${reset}${mark}`;
 }
 
 function accountLines(a: AccountNode, now: Date): string[] {
@@ -31,8 +31,8 @@ export function renderSummaryText(tree: ProviderNode[], summary: Summary, now: D
   const min = summary.minimum;
   lines.push(
     min
-      ? `Минимум: ${min.providerName} ${min.label} ${Math.round(min.remainingPercent)}%`
-      : "Минимум: нет данных",
+      ? `Больше всего использовано: ${min.providerName} ${min.label} ${100 - Math.round(min.remainingPercent)}%`
+      : "Больше всего использовано: нет данных",
   );
   lines.push(`Аккаунтов: ${summary.accountCount}, устройств: ${summary.deviceCount}`);
   return lines.join("\n") + "\n";

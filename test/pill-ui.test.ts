@@ -9,15 +9,15 @@ const view = (over: Partial<PillView>): PillView => ({
 });
 
 describe("badgeFor", () => {
-  it("shows the lowest remaining percent", () => {
-    expect(badgeFor(on, view({}))).toEqual({ text: "62%", tone: "neutral", label: "Минимальный остаток: Claude Code, 62%" });
+  it("shows the highest used percent", () => {
+    expect(badgeFor(on, view({}))).toEqual({ text: "38%", tone: "neutral", label: "Больше всего использовано: Claude Code, 38%" });
   });
   it("maps warning and critical tones", () => {
     expect(badgeFor(on, view({ percent: 24, tone: "warn" }))?.tone).toBe("warning");
     expect(badgeFor(on, view({ percent: 7, tone: "bad" }))?.tone).toBe("critical");
   });
   it("rounds and keeps the text within the host's 8 characters", () => {
-    expect(badgeFor(on, view({ percent: 41.6 }))?.text).toBe("42%");
+    expect(badgeFor(on, view({ percent: 41.6 }))?.text).toBe("58%");
   });
   it("hides when disabled by either setting", () => {
     expect(badgeFor({ ...on, pillFallback: "hidden" }, view({}))).toBeNull();

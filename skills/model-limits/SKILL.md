@@ -19,5 +19,5 @@ Data older than 30 minutes, or a window whose reset time has passed, is marked s
 
 - `refreshSeconds`: background interval in seconds (60, 120, 300, 600); `0` turns background collection off.
 - `showPill`: show the model limit in the chat header and the badge on the limits page.
-- `pillFallback`: `minimum` shows the lowest remaining window as a badge on the limits page, `hidden` removes the badge.
+- `pillFallback`: `minimum` shows the highest used percent as a badge on the limits page, `hidden` removes the badge.
 - `deepseekApiKey`, `polzaApiKey`, `customKey1` to `customKey5`: secret keys for HTTP balance sources. Each source picks a key slot in the plugin's settings page; the key is only sent to that source's address.

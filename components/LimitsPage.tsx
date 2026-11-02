@@ -27,7 +27,7 @@ export function SummaryTiles({ summary, now }: { summary: Summary; now: Date }) 
   const reset = formatReset(summary.nextResetAt, now);
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <Tile title="Минимум" value={min ? `${Math.round(min.remainingPercent)}% · ${min.providerName}` : "—"} />
+      <Tile title="Больше всего использовано" value={min ? `${100 - Math.round(min.remainingPercent)}% · ${min.providerName}` : "—"} />
       <Tile title="Ближайший сброс" value={reset || "—"} />
       <Tile title="Аккаунтов" value={String(summary.accountCount)} />
       <Tile title="Устройств" value={String(summary.deviceCount)} />

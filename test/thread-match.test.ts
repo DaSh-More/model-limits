@@ -47,7 +47,8 @@ describe("matchThread", () => {
     const v = matchThread(chat("claude-fable-5-1"), tree, CATALOG, NOW);
     expect(v.percent).toBe(41);
     expect(v.tone).toBe("good");
-    expect(v.text).toBe("41%");
+    expect(v.text).toBe("59%");
+    expect(v.limitLabel).toBe("Fable");
     expect(v.limits.map((l) => l.label)).toEqual(["Сессия", "Неделя", "Fable"]);
     expect(v.providerName).toBe("Claude Code");
     expect(v.deviceName).toBe("VM");
@@ -71,7 +72,7 @@ describe("matchThread", () => {
   it("maps Pi kimi to a single Kimi account", () => {
     const k = (n: string) => account([win("W", 60)], { key: n });
     const one = [prov("kimi-code", "Kimi", [k("1")])];
-    expect(matchThread(chat("kimi-k3", "pi", null), one, [], NOW).text).toBe("60%");
+    expect(matchThread(chat("kimi-k3", "pi", null), one, [], NOW).text).toBe("40%");
     const two = [prov("kimi-code", "Kimi", [k("1"), k("2")])];
     expect(matchThread(chat("kimi-k3", "pi", null), two, [], NOW).text).toBe("нет данных");
   });
@@ -121,7 +122,7 @@ describe("idlePill", () => {
   });
   it("minimum window", () => {
     const v = idlePill([prov("a", "A", [account([win("W", 20)])]), prov("b", "B", [account([win("W", 9.6)])])], NOW);
-    expect(v.text).toBe("10%");
+    expect(v.text).toBe("90%");
     expect(v.providerName).toBe("B");
     expect(v.tone).toBe("bad");
   });

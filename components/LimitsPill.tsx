@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import * as Popover from "@radix-ui/react-popover";
+import * as HoverCard from "@radix-ui/react-hover-card";
 import { useBbNavigate, useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
 import { usePortalScopeProps } from "../lib/portal-scope";
-import { displayPercent, formatAge, formatAmount } from "../src/format";
+import { displayPercent, formatAge, formatAmount, formatReset } from "../src/format";
 import type { PillConfig } from "../src/pill-ui";
 import type { rpcContract } from "../src/rpc-contract";
 import type { PillView } from "../src/thread-match";
@@ -74,22 +74,40 @@ export function LimitsPill({
 
   const label = view.model ?? view.providerName ?? "Лимит";
   const meta = [view.deviceName, view.fetchedAt ? formatAge(view.fetchedAt, now) : null].filter(Boolean).join(" · ");
+  const limits = Array.isArray(view.limits) ? view.limits : [];
+  const shown = limits.find((l) => l.label === view.limitLabel);
+  const reset = shown?.kind === "window" ? formatReset(shown.resetsAt, now) : "";
+  const limitLine = [view.limitLabel, reset].filter(Boolean).join(" · ");
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
+    <HoverCard.Root open={open} onOpenChange={setOpen} openDelay={150} closeDelay={200}>
+      <HoverCard.Trigger asChild>
         <button
           type="button"
-          aria-label={`Лимит: ${label}, ${view.text}`}
-          className="flex h-7 max-w-56 items-center gap-1.5 rounded-md px-2 text-xs hover:bg-muted"
+          aria-label={`${label}: использовано ${view.text}${limitLine ? `, ${limitLine}` : ""}`}
+          onClick={() => {
+            if (isCompactViewport) setOpen((v) => !v);
+            else nav.toPluginPanel("limits");
+          }}
+          className="flex h-9 max-w-64 flex-col justify-center rounded-md px-2 text-left hover:bg-muted"
         >
-          <span className={`size-2 shrink-0 rounded-full ${DOT[view.tone]}`} />
-          {isCompactViewport ? null : <span className="min-w-0 truncate">{label}</span>}
-          <span className="shrink-0 tabular-nums">{view.text}</span>
+          <span className="flex min-w-0 items-center gap-1.5 text-xs leading-4">
+            <span className={`size-2 shrink-0 rounded-full ${DOT[view.tone]}`} />
+            {isCompactViewport ? null : (
+              <>
+                <span className="min-w-0 truncate text-muted-foreground">{label}</span>
+                <span className="h-3 w-px shrink-0 bg-border" aria-hidden="true" />
+              </>
+            )}
+            <span className="shrink-0 font-medium tabular-nums">{view.text}</span>
+          </span>
+          {isCompactViewport || !limitLine ? null : (
+            <span className="truncate pl-3.5 text-[10px] leading-3 text-muted-foreground">{limitLine}</span>
+          )}
         </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
+      </HoverCard.Trigger>
+      <HoverCard.Portal>
+        <HoverCard.Content
           {...portalScope}
           align="end"
           sideOffset={6}
@@ -99,7 +117,7 @@ export function LimitsPill({
           <div className="truncate text-sm font-medium">{cardTitle(view)}</div>
           <div className="mt-0.5 text-muted-foreground">{meta || "нет данных"}</div>
           <div className="mt-2 space-y-1">
-            {(Array.isArray(view.limits) ? view.limits : []).map((l) => (
+            {limits.map((l) => (
               <div key={l.id} className="flex items-baseline justify-between gap-2">
                 <span className="truncate">{l.label}</span>
                 <span className="tabular-nums">
@@ -118,8 +136,8 @@ export function LimitsPill({
           >
             Открыть страницу лимитов
           </button>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+        </HoverCard.Content>
+      </HoverCard.Portal>
+    </HoverCard.Root>
   );
 }

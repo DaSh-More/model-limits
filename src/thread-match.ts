@@ -8,6 +8,8 @@ export interface ThreadInput {
 }
 
 export interface PillView {
+  /** The limit the shown value comes from, e.g. "Current session". */
+  limitLabel?: string | null;
   model: string | null;
   text: string;
   percent: number | null;
@@ -70,7 +72,7 @@ export function toneFor(percent: number): "good" | "warn" | "bad" {
 
 function noData(input: ThreadInput, providerName: string | null = null): PillView {
   return {
-    model: input.model, text: NO_DATA, percent: null, tone: "muted", stale: false,
+    limitLabel: null, model: input.model, text: NO_DATA, percent: null, tone: "muted", stale: false,
     limits: [], providerName, deviceName: null, fetchedAt: null,
   };
 }
@@ -131,9 +133,11 @@ export function matchThread(
     const min = pool.reduce((a, b) => (b.remainingPercent < a.remainingPercent ? b : a));
     const stale = fresh.length === 0;
     const percent = Math.round(min.remainingPercent);
+    const used = 100 - percent;
     return {
       ...base,
-      text: stale ? `${percent}% ⚠` : `${percent}%`,
+      limitLabel: min.label,
+      text: stale ? `${used}% ⚠` : `${used}%`,
       percent,
       tone: stale ? "muted" : toneFor(percent),
       stale,
@@ -144,7 +148,7 @@ export function matchThread(
   if (balance && balance.kind === "balance") {
     const stale = isStale(balance, account.fetchedAt, now);
     const text = formatBalance(balance.amount, balance.currency);
-    return { ...base, text: stale ? `${text} ⚠` : text, percent: null, tone: "muted", stale };
+    return { ...base, limitLabel: balance.label, text: stale ? `${text} ⚠` : text, percent: null, tone: "muted", stale };
   }
 
   return { ...noData(input, provider.name), deviceName };
@@ -171,7 +175,7 @@ export function idlePill(tree: ProviderNode[], now: Date): PillView {
     }
   }
   return {
-    model: null, text: `${percent}%`, percent, tone: toneFor(percent), stale: false,
+    model: null, limitLabel: min.label, text: `${100 - percent}%`, percent, tone: toneFor(percent), stale: false,
     limits, providerName: min.providerName, deviceName: null, fetchedAt,
   };
 }

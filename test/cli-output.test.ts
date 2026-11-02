@@ -32,12 +32,12 @@ const tree = (): ProviderNode[] => [
 ];
 
 describe("renderSummaryText", () => {
-  it("shows provider, limit and remaining", () => {
+  it("shows provider, limit and used share", () => {
     const t = tree();
     const out = renderSummaryText(t, summarize(t, now), now);
     expect(out).toContain("Claude Code");
     expect(out).toContain("5h");
-    expect(out).toContain("42%");
+    expect(out).toContain("58% использовано");
     expect(out).toContain("DeepSeek");
     expect(out).toContain("5,50 USD");
   });

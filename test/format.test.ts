@@ -50,10 +50,10 @@ describe("formatAge", () => {
 });
 
 describe("displayPercent", () => {
-  it("rounds and clamps", () => {
-    expect(displayPercent(63.6)).toEqual({ width: 64, text: "64%" });
-    expect(displayPercent(150)).toEqual({ width: 100, text: "100%" });
-    expect(displayPercent(-3)).toEqual({ width: 0, text: "0%" });
+  it("shows the used share, rounded and clamped", () => {
+    expect(displayPercent(63.6)).toEqual({ width: 36, text: "36%" });
+    expect(displayPercent(150)).toEqual({ width: 0, text: "0%" });
+    expect(displayPercent(-3)).toEqual({ width: 100, text: "100%" });
   });
   it("treats non-finite as unknown", () => {
     for (const v of [NaN, Infinity, undefined as unknown as number])
