@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useBbContext, useBbNavigate, useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
+import * as Popover from "@radix-ui/react-popover";
+import { useBbNavigate, useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
+import { usePortalScopeProps } from "../lib/portal-scope";
 import { displayPercent, formatAge, formatAmount } from "../src/format";
-import { PILL_POSITION, shouldShowPill, type PillConfig } from "../src/pill-position";
+import type { PillConfig } from "../src/pill-ui";
 import type { rpcContract } from "../src/rpc-contract";
 import type { PillView } from "../src/thread-match";
 
@@ -13,31 +15,26 @@ const DOT: Record<PillView["tone"], string> = {
   muted: "bg-muted-foreground",
 };
 
-function useViewportWidth(): number {
-  const [width, setWidth] = useState(() => window.innerWidth);
-  useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  return width;
-}
-
 function cardTitle(view: PillView): string {
-  if (view.model === null) return "Минимум среди аккаунтов";
+  if (view.model === null) return view.providerName ?? "Лимит модели";
   return view.providerName ? `${view.providerName} · ${view.model}` : view.model;
 }
 
-export function LimitsPill() {
+export function LimitsPill({
+  threadId,
+  isCompactViewport,
+}: {
+  threadId: string;
+  isCompactViewport: boolean;
+}) {
   const rpc = useRpc<typeof rpcContract>();
-  const { threadId } = useBbContext();
   const nav = useBbNavigate();
-  const width = useViewportWidth();
+  const portalScope = usePortalScopeProps();
   const [config, setConfig] = useState<PillConfig | null>(null);
   const [view, setView] = useState<PillView | null>(null);
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
-  const current = useRef<string | null>(threadId);
+  const current = useRef(threadId);
   current.current = threadId;
   const seq = useRef(0);
   const rpcRef = useRef(rpc);
@@ -73,32 +70,34 @@ export function LimitsPill() {
   }, [threadId]);
   useRealtime("snapshot-changed", () => void loadRef.current());
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  if (!config?.showPill || !view) return null;
 
-  if (!config || !view || !shouldShowPill(config, view, threadId, width)) return null;
-
-  const label = view.model ?? view.providerName ?? "Минимум";
-  const idle = threadId === null;
+  const label = view.model ?? view.providerName ?? "Лимит";
   const meta = [view.deviceName, view.fetchedAt ? formatAge(view.fetchedAt, now) : null].filter(Boolean).join(" · ");
 
   return (
-    <div
-      className="fixed z-30 pointer-events-none"
-      style={{ left: PILL_POSITION.left, bottom: PILL_POSITION.bottom, width: PILL_POSITION.width }}
-    >
-      {open && (
-        <div className="pointer-events-auto mb-2 rounded-lg border bg-card p-3 text-xs shadow-lg">
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label={`Лимит: ${label}, ${view.text}`}
+          className="flex h-7 max-w-56 items-center gap-1.5 rounded-md px-2 text-xs hover:bg-muted"
+        >
+          <span className={`size-2 shrink-0 rounded-full ${DOT[view.tone]}`} />
+          {isCompactViewport ? null : <span className="min-w-0 truncate">{label}</span>}
+          <span className="shrink-0 tabular-nums">{view.text}</span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          {...portalScope}
+          align="end"
+          sideOffset={6}
+          collisionPadding={8}
+          className="z-50 w-64 rounded-lg border bg-card p-3 text-xs text-foreground shadow-lg"
+        >
           <div className="truncate text-sm font-medium">{cardTitle(view)}</div>
-          <div className="mt-0.5 text-muted-foreground">
-            {idle ? "Балансы в минимум не входят" : meta || "нет данных"}
-          </div>
+          <div className="mt-0.5 text-muted-foreground">{meta || "нет данных"}</div>
           <div className="mt-2 space-y-1">
             {(Array.isArray(view.limits) ? view.limits : []).map((l) => (
               <div key={l.id} className="flex items-baseline justify-between gap-2">
@@ -119,18 +118,8 @@ export function LimitsPill() {
           >
             Открыть страницу лимитов
           </button>
-        </div>
-      )}
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="pointer-events-auto flex w-full items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-xs"
-      >
-        <span className={`size-2 shrink-0 rounded-full ${DOT[view.tone]}`} />
-        <span className="min-w-0 flex-1 truncate text-left">{label}</span>
-        <span className="shrink-0 tabular-nums">{view.text}</span>
-      </button>
-    </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
