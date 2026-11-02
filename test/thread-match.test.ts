@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { idlePill, matchThread, toneFor, windowAppliesToModel } from "../src/thread-match";
+import { headerLabel, idlePill, matchThread, toneFor, windowAppliesToModel } from "../src/thread-match";
 import type { AccountNode, Limit, ProviderNode } from "../src/types";
 
 const NOW = new Date("2026-11-01T12:00:00Z");
@@ -181,5 +181,29 @@ describe("model window matching", () => {
   it("uses the Fable window for a Fable chat", () => {
     const t = tree([win("Current session", 63), win("Fable", 41, { model: "fable" })]);
     expect(matchThread(input(FABLE), t, CATALOG, NOW).percent).toBe(41);
+  });
+});
+
+describe("headerLabel", () => {
+  const shared = [prov("claude-code", "Claude Code", [account([win("Сессия", 64), win("Fable", 41)])])];
+  const noData = { model: "mystery-1", providerName: null, hasModelLimit: false };
+
+  it("shows the provider when the model has no limit of its own", () => {
+    expect(headerLabel(matchThread(chat("claude-opus-5-5"), shared, CATALOG, NOW))).toBe("Claude Code");
+  });
+  it("shows the model when it has its own limit by window name", () => {
+    expect(headerLabel(matchThread(chat("claude-fable-5-1"), shared, CATALOG, NOW))).toBe("claude-fable-5-1");
+  });
+  it("shows the model when BB marks the window with that model", () => {
+    const tagged = [prov("claude-code", "Claude Code", [account([win("Лимит", 80, { model: "fable" })])])];
+    expect(headerLabel(matchThread(chat("claude-fable-5-1"), tagged, [], NOW))).toBe("claude-fable-5-1");
+  });
+  it("ignores another model's window", () => {
+    const tagged = [prov("claude-code", "Claude Code", [account([win("Сессия", 64), win("Лимит", 80, { model: "fable" })])])];
+    expect(headerLabel(matchThread(chat("claude-opus-5-5"), tagged, [], NOW))).toBe("Claude Code");
+  });
+  it("falls back to the model, then a generic label", () => {
+    expect(headerLabel(noData)).toBe("mystery-1");
+    expect(headerLabel({ model: null, providerName: null, hasModelLimit: false })).toBe("Лимит");
   });
 });

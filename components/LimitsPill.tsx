@@ -7,7 +7,7 @@ import type { PillConfig } from "../src/pill-ui";
 import { isStale } from "../src/summary";
 import { LimitBar } from "./LimitRow";
 import type { rpcContract } from "../src/rpc-contract";
-import type { PillView } from "../src/thread-match";
+import { headerLabel, type PillView } from "../src/thread-match";
 
 const POLL_MS = 60_000;
 const DOT: Record<PillView["tone"], string> = {
@@ -74,7 +74,7 @@ export function LimitsPill({
 
   if (!config?.showPill || !view) return null;
 
-  const label = view.model ?? view.providerName ?? "Лимит";
+  const label = headerLabel(view);
   const meta = [view.deviceName, view.fetchedAt ? formatAge(view.fetchedAt, now) : null].filter(Boolean).join(" · ");
   const limits = Array.isArray(view.limits) ? view.limits : [];
   const shown = limits.find((l) => l.label === view.limitLabel);
@@ -136,16 +136,6 @@ export function LimitsPill({
               </div>
             ))}
           </div>
-          <button
-            type="button"
-            className="mt-2 text-warning-text underline-offset-2 hover:underline"
-            onClick={() => {
-              setOpen(false);
-              nav.toPluginPanel("limits");
-            }}
-          >
-            Открыть страницу лимитов
-          </button>
         </HoverCard.Content>
       </HoverCard.Portal>
     </HoverCard.Root>

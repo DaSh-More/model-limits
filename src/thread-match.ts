@@ -8,6 +8,8 @@ export interface ThreadInput {
 }
 
 export interface PillView {
+  /** The chat's model has a limit of its own, separate from the account's. */
+  hasModelLimit?: boolean;
   /** The limit the shown value comes from, e.g. "Current session". */
   limitLabel?: string | null;
   model: string | null;
@@ -127,6 +129,9 @@ export function matchThread(
   };
 
   const windows = considered.filter((l): l is Extract<Limit, { kind: "window" }> => l.kind === "window");
+  const hasModelLimit = windows.some(
+    (w) => w.model !== null || (chatModel !== null && windowAppliesToModel(w.label, chatModel, catalog) === "model"),
+  );
   if (windows.length > 0) {
     const fresh = windows.filter((w) => !isStale(w, account.fetchedAt, now));
     const pool = fresh.length > 0 ? fresh : windows;
@@ -136,6 +141,7 @@ export function matchThread(
     const used = 100 - percent;
     return {
       ...base,
+      hasModelLimit,
       limitLabel: min.label,
       text: stale ? `${used}% ⚠` : `${used}%`,
       percent,
@@ -152,6 +158,12 @@ export function matchThread(
   }
 
   return { ...noData(input, provider.name), deviceName };
+}
+
+/** Header name: the provider, unless the model has its own limit. */
+export function headerLabel(view: Pick<PillView, "model" | "providerName" | "hasModelLimit">): string {
+  if (view.hasModelLimit && view.model) return view.model;
+  return view.providerName ?? view.model ?? "Лимит";
 }
 
 export function idlePill(tree: ProviderNode[], now: Date): PillView {
