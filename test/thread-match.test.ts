@@ -139,3 +139,46 @@ describe("resolveProviderId", () => {
     expect(r("pi", null)).toBeNull();
   });
 });
+
+import { modelFromEvents } from "../src/thread-match";
+describe("modelFromEvents", () => {
+  const ev = (seq: number, model?: unknown) => ({ seq, data: model === undefined ? {} : { execution: { model } } });
+  it("picks the highest seq with a model", () => {
+    expect(modelFromEvents([ev(3, "a"), ev(9, "b"), ev(5, "c")])).toBe("b");
+  });
+  it("skips rows without a model", () => {
+    expect(modelFromEvents([ev(9), ev(8, ""), ev(7, 5), ev(4, "x")])).toBe("x");
+  });
+  it("returns null when empty", () => {
+    expect(modelFromEvents([])).toBeNull();
+    expect(modelFromEvents([ev(1)])).toBeNull();
+  });
+});
+
+describe("model window matching", () => {
+  const FABLE = "claude-fable-5-1";
+  const input = (model: string | null) => ({ providerId: "claude-code", model, hostId: "vps-1" });
+  const tree = (limits: Limit[]): ProviderNode[] => [
+    { providerId: "claude-code", name: "Claude", accounts: [account(limits)] } as ProviderNode,
+  ];
+  const applies = (windowModel: string, chat: string | null) =>
+    matchThread(input(chat), tree([win("W", 10, { model: windowModel })]), CATALOG, NOW).limits.length === 1;
+  it("matches a whole segment", () => {
+    expect(applies("fable", FABLE)).toBe(true);
+    expect(applies("Fable", FABLE)).toBe(true);
+  });
+  it("rejects other models and partial segments", () => {
+    expect(applies("fable", "claude-opus-5-5")).toBe(false);
+    expect(applies("fab", FABLE)).toBe(false);
+  });
+  it("keeps exact full id", () => {
+    expect(applies(FABLE, FABLE)).toBe(true);
+  });
+  it("excludes with null chat model", () => {
+    expect(applies("fable", null)).toBe(false);
+  });
+  it("uses the Fable window for a Fable chat", () => {
+    const t = tree([win("Current session", 63), win("Fable", 41, { model: "fable" })]);
+    expect(matchThread(input(FABLE), t, CATALOG, NOW).percent).toBe(41);
+  });
+});

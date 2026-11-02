@@ -31,6 +31,26 @@ function segments(model: string): string[] {
   return model.toLowerCase().split("-").filter(Boolean);
 }
 
+function modelWindowMatches(windowModel: string, chatModel: string): boolean {
+  const w = windowModel.toLowerCase();
+  return w === chatModel.toLowerCase() || segments(chatModel).includes(w);
+}
+
+export function modelFromEvents(
+  events: ReadonlyArray<{ seq: number; data: unknown }>,
+): string | null {
+  let best = -Infinity;
+  let model: string | null = null;
+  for (const e of events) {
+    const m = (e.data as { execution?: { model?: unknown } } | null)?.execution?.model;
+    if (typeof m === "string" && m !== "" && e.seq > best) {
+      best = e.seq;
+      model = m;
+    }
+  }
+  return model;
+}
+
 export function windowAppliesToModel(
   label: string,
   model: string,
@@ -94,7 +114,7 @@ export function matchThread(
   const chatModel = input.model;
   const considered = account.limits.filter((l) => {
     if (l.kind === "balance") return true;
-    if (l.model !== null) return chatModel !== null && l.model.toLowerCase() === chatModel.toLowerCase();
+    if (l.model !== null) return chatModel !== null && modelWindowMatches(l.model, chatModel);
     if (chatModel === null) return true;
     return windowAppliesToModel(l.label, chatModel, catalog) !== "other-model";
   });

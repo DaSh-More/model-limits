@@ -7,7 +7,7 @@ import { fetchHttpSource } from "./src/sources/http";
 import { presetKeyMismatch } from "./src/sources/guard";
 import { PRESETS } from "./src/sources/presets";
 import { summarize } from "./src/summary";
-import { matchThread, idlePill, resolveProviderId, type PillView } from "./src/thread-match";
+import { matchThread, idlePill, modelFromEvents, resolveProviderId, type PillView } from "./src/thread-match";
 import { buildDiscoveredTree, buildPillTrees, buildStoredTree } from "./src/tree";
 import { KEY_SLOTS, type HttpSource, type KeySlot, type Overrides } from "./src/types";
 
@@ -116,15 +116,11 @@ export default async function plugin(bb: BbPluginApi) {
       }
       let model: string | null = null;
       try {
-        const events = await bb.sdk.threads.events.list({ threadId, limit: "50", order: "desc" });
-        let best = -Infinity;
-        for (const e of events) {
-          const m = (e.data as { execution?: { model?: unknown } }).execution?.model;
-          if (typeof m === "string" && m !== "" && e.seq > best) {
-            best = e.seq;
-            model = m;
-          }
-        }
+        const events = await bb.sdk.threads.events.list({
+          threadId, limit: "10", order: "desc",
+          types: ["client/turn/requested", "client/turn/start", "client/thread/start"],
+        });
+        model = modelFromEvents(events);
       } catch {
         model = null;
       }
